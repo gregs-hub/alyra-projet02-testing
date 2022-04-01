@@ -19,17 +19,133 @@ contract('Vote', accounts => {
 
     let instance;
 
-    // REGISTRATION
-    describe("Registration phase", () => {
+    // GLOBAL WORKFLOW
+    describe("Validate workflow status changes and rights", () => {
+
+        async function checkStatusChange(_status, _id, _receipt) {
+            expect(new BN(_status)).to.be.bignumber.equal(new BN(_id));
+            expectEvent(_receipt, "WorkflowStatusChange", { '0': new BN(_id - 1), '1': new BN(_id) });
+        };
+
+        beforeEach(async () => {
+            instance = await Voting.new({ from: admin });
+        });
+
+        // Default status is 0 (RegisteringVoters)
+        it('should show a default status set to 0 (RegisteringVoters)', async () => {
+            const status = await instance.workflowStatus.call();
+            expect(new BN(status)).to.be.bignumber.equal(new BN(0));
+        });
+
+        // Admin can switch from status 0 (RegisteringVoters) to 1 (ProposalsRegistrationStarted)
+        it('should start the proposals registration and switch to status 1', async () => {
+            const receipt = await instance.startProposalsRegistering({ from: admin });
+            const status = await instance.workflowStatus.call();
+            await checkStatusChange(status, 1, receipt);
+        });
+
+        // Admin can switch from status 1 (ProposalsRegistrationStarted) to 2 (ProposalsRegistrationEnded)
+        it('should end the proposals registration and switch to status 2', async () => {
+            await instance.startProposalsRegistering({ from: admin });
+            const receipt = await instance.endProposalsRegistering({ from: admin });
+            const status = await instance.workflowStatus.call();
+            await checkStatusChange(status, 2, receipt);
+        });
+
+        // Admin can switch from status 2 (ProposalsRegistrationEnded) to 3 (VotingSessionStarted)
+        it('should start voting session and switch to status 3', async () => {
+            await instance.startProposalsRegistering({ from: admin });
+            await instance.endProposalsRegistering({ from: admin });
+            const receipt = await instance.startVotingSession({ from: admin });
+            const status = await instance.workflowStatus.call();
+            await checkStatusChange(status, 3, receipt);
+        });
+
+        // Admin can switch from status 3 (VotingSessionStarted) to 4 (VotingSessionEnded)
+        it('should end voting session and switch to status 4', async () => {
+            await instance.startProposalsRegistering({ from: admin });
+            await instance.endProposalsRegistering({ from: admin });
+            await instance.startVotingSession({ from: admin });
+            const receipt = await instance.endVotingSession({ from: admin });
+            const status = await instance.workflowStatus.call();
+            await checkStatusChange(status, 4, receipt);
+        });
+
+        // Admin can switch from status 3 (VotingSessionStarted) to 4 (VotingSessionEnded)
+        it('should tallies vote and switch to status 5', async () => {
+            await instance.startProposalsRegistering({ from: admin });
+            await instance.endProposalsRegistering({ from: admin });
+            await instance.startVotingSession({ from: admin });
+            await instance.endVotingSession({ from: admin });
+            const receipt = await instance.tallyVotes({ from: admin });
+            const status = await instance.workflowStatus.call();
+            await checkStatusChange(status, 5, receipt);
+        });
+
+
+        // Cannot switch to status 1 (ProposalsRegistrationStarted) if not currently in status 0 (RegisteringVoters)
+        it('should not start proposals registration if not currently in RegisteringVoters status', async () => {
+            await instance.startProposalsRegistering({ from: admin }); // force not to be in status 0
+            await expectRevert(instance.startProposalsRegistering({ from: admin }), "Registering proposals cant be started now");
+        });
+
+        // Cannot switch to status 2 (ProposalsRegistrationEnded) if not currently in status 1 (ProposalsRegistrationStarted)
+        it('should not end the proposals registration if not currently in ProposalsRegistrationStarted status', async () => {
+            await expectRevert(instance.endProposalsRegistering({ from: admin }), "Registering proposals havent started yet");
+        });
+
+        // Cannot switch to status 3 (VotingSessionStarted) if not currently in status 2 (ProposalsRegistrationEnded)
+        it('should not start voting session if not currently in ProposalsRegistrationEnded status', async () => {
+            await expectRevert(instance.startVotingSession({ from: admin }), "Registering proposals phase is not finished");
+        });
+
+        // Cannot switch to status 4 (VotingSessionEnded) if not currently in status 3 (VotingSessionStarted)
+        it('should not end voting session if not currently in VotingSessionStarted status', async () => {
+            await expectRevert(instance.endVotingSession({ from: admin }), "Voting session havent started yet");
+        });
+
+        // Cannot switch to status 5 (VotesTallied) if not currently in status 4 (VotingSessionEnded)
+        it('should not tally votes if not currently in VotingSessionEnded status', async () => {
+            await expectRevert(instance.tallyVotes({ from: admin }), "Current status is not voting session ended");
+        });
+
+
+        // Only admin can start proposals registration
+        it('should not start the proposals registration if not admin', async () => {
+            await expectRevert(instance.startProposalsRegistering({ from: notadmin }), "Ownable: caller is not the owner");
+        });
+
+        // Only admin can end proposals registration
+        it('should not end proposals registration if not admin', async () => {
+            await expectRevert(instance.endProposalsRegistering({ from: notadmin }), "Ownable: caller is not the owner");
+        });
+
+        // Only admin can start voting session
+        it('should not start voting session if not admin', async () => {
+            await expectRevert(instance.startVotingSession({ from: notadmin }), "Ownable: caller is not the owner");
+        });
+
+        // Only admin can end voting session
+        it('should not end voting session if not admin', async () => {
+            await expectRevert(instance.endVotingSession({ from: notadmin }), "Ownable: caller is not the owner");
+        });
+
+        // Only admin can tally votes and get winner
+        it('should not be able to tally votes if not admin', async () => {
+            await expectRevert(instance.tallyVotes({ from: notadmin }), "Ownable: caller is not the owner");
+        });
+
+    });
+
+    // REGISTRATION PHASE
+    describe("Validate registration phase", () => {
 
         before(async () => {
             instance = await Voting.new({ from: admin });
         });
-        
+
         // Admin can add a new voter during registration phase and can get a voter
-        // check: voter.isRegistered = true
-        // check: event VoterRegistered(voterAddress)
-        it('should add a new voter if admin', async () => {
+        it('should add a new voter', async () => {
             const receipt = await instance.addVoter(voterA, { from: admin });
             const voter = await instance.getVoter(voterA, { from: voterA });
             expect(voter.isRegistered).to.equal(true);
@@ -37,32 +153,28 @@ contract('Vote', accounts => {
         });
 
         // Only admin can add a new voter
-        // check: revert "Ownable: caller is not the owner"
         it('should not add a new voter if not admin', async () => {
             await expectRevert(instance.addVoter(voterB, { from: notadmin }), "Ownable: caller is not the owner");
         });
 
         // Cannot add a new voter if already registered in the list
-        // check: revert "Already registered"
         it('should not add a voter if already exists in the list of voters', async () => {
             await expectRevert(instance.addVoter(voterA, { from: admin }), "Already registered");
         });
-        
+
         // Admin can only add new voters when status is set to RegisteringVoters
-        // do: change status to ProposalsRegistrationStarted
-        // check: revert "Voters registration is not open yet"
         it("should not add a new voter if the workflow status is set to another status", async () => {
             await instance.startProposalsRegistering({ from: admin });
             await expectRevert(instance.addVoter(voterA, { from: admin }), "Voters registration is not open yet");
         });
-        
+
         // Only voters can get a voter in the list
-        // check: revert "You're not a voter"
         it('should not get a voter in the list if not registered as voter', async () => {
             await expectRevert(instance.getVoter(voterA, { from: notvoter }), "You're not a voter");
         });
 
     });
-    
+
+
 });
 
