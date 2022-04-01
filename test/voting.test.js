@@ -71,7 +71,7 @@ contract('Vote', accounts => {
             await checkStatusChange(status, 4, receipt);
         });
 
-        // Admin can switch from status 3 (VotingSessionStarted) to 4 (VotingSessionEnded)
+        // Admin can switch from status 4 (VotingSessionEnded) to 5 (VotesTallied)
         it('should tallies vote and switch to status 5', async () => {
             await instance.startProposalsRegistering({ from: admin });
             await instance.endProposalsRegistering({ from: admin });
