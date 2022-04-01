@@ -185,7 +185,7 @@ contract('Vote', accounts => {
         });
 
         // Voters cannot add new proposals when status is different from ProposalsRegistrationStarted
-        it("should not add a new voter if the workflow status is set to another status", async () => {
+        it("should not add a new proposal if workflow status is not ProposalsRegistrationStarted", async () => {
             await expectRevert(instance.addProposal(propA, { from: voterA }), "Proposals are not allowed yet");
         });
 
@@ -203,7 +203,7 @@ contract('Vote', accounts => {
         // A voter in the list can add one proposal
         it('should add a proposal if provided by a registered voter', async () => {
             const receiptA = await instance.addProposal(propA, { from: voterA });
-            const proposalA = await instance.getOneProposal(0, { from: voterA });
+            const proposalA = await instance.getOneProposal(new BN(0), { from: voterA });
             expect(proposalA.description).to.equal(propA);
             expectEvent(receiptA, "ProposalRegistered", { proposalId: new BN(0) });
         });
@@ -226,10 +226,58 @@ contract('Vote', accounts => {
 
         // Only voters can get a proposal in the list
         it('should not get a proposal from the list if not registered as voter', async () => {
-            await expectRevert(instance.getOneProposal(2, { from: notvoter }), "You're not a voter");
+            await expectRevert(instance.getOneProposal(new BN(2), { from: notvoter }), "You're not a voter");
         });
 
     });
+
+    // VOTING PHASE
+    describe.only('Validate voting phase', () => {
+
+        before(async () => {
+            instance = await Voting.new({ from: admin });
+            await instance.addVoter(voterA, { from: admin });
+            await instance.addVoter(voterB, { from: admin });
+            await instance.startProposalsRegistering({ from: admin });
+            await instance.addProposal(propA, { from: voterA });
+            await instance.addProposal(propB, { from: voterA });
+            await instance.addProposal(propC, { from: voterB });
+            await instance.endProposalsRegistering({ from: admin });
+        });
+
+        // Voters can only vote when status is set to VotingSessionStarted
+        it("should not vote if workflow status is not VotingSessionStarted", async () => {
+            await expectRevert(instance.setVote(new BN(1), { from: voterA }), "Voting session havent started yet");
+        });
+
+        // Cannot vote if not in the voters' list
+        it('should not vote if not a registered voter', async () => {
+            await instance.startVotingSession({ from: admin });
+            await expectRevert(instance.setVote(new BN(1), { from: notvoter }), "You're not a voter");
+        });
+
+        // A voter in the list can vote for an existing proposal
+        it('should vote for an existing proposal if a registered voter', async () => {
+            const receipt = await instance.setVote(new BN(1), { from: voterA });
+            const voter = await instance.getVoter(voterA, { from: voterB });
+            expect(voter.hasVoted).to.equal(true);
+            expect(voter.votedProposalId).to.be.bignumber.equal(new BN(1));
+            expectEvent(receipt, "Voted", { voter: voterA, proposalId: new BN(1)});
+        });
+
+        // A voter cannot vote twice
+        it('should not vote twice', async () => {
+            await expectRevert(instance.setVote(new BN(0), { from: voterA }), "You have already voted");
+        });
+
+        // Cannot vote for a non-existing proposal
+        it('should not vote for a non-existing proposal', async () => {
+            await expectRevert(instance.setVote(new BN(10), { from: voterB }), "Proposal not found");
+        });
+
+    });
+
+
 
 });
 
