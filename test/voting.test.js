@@ -169,12 +169,67 @@ contract('Vote', accounts => {
         });
 
         // Only voters can get a voter in the list
-        it('should not get a voter in the list if not registered as voter', async () => {
+        it('should not get a voter from the list if not registered as voter', async () => {
             await expectRevert(instance.getVoter(voterA, { from: notvoter }), "You're not a voter");
         });
 
     });
 
+    // PROPOSALS PHASE
+    describe('Validate proposals phase', () => {
+
+        before(async () => {
+            instance = await Voting.new({ from: admin });
+            await instance.addVoter(voterA, { from: admin });
+            await instance.addVoter(voterB, { from: admin });
+        });
+
+        // Voters cannot add new proposals when status is different from ProposalsRegistrationStarted
+        it("should not add a new voter if the workflow status is set to another status", async () => {
+            await expectRevert(instance.addProposal(propA, { from: voterA }), "Proposals are not allowed yet");
+        });
+
+        // Cannot add a proposal if not in the voters' list
+        it('should not add a proposal if not a registered voter', async () => {
+            await instance.startProposalsRegistering({ from: admin });
+            await expectRevert(instance.addProposal(propA, { from: notvoter }), "You're not a voter");
+        });
+
+        // Cannot add an empty proposal
+        it('should not add an empty proposal', async () => {
+            await expectRevert(instance.addProposal(emptyprop, { from: voterA }), "Vous ne pouvez pas ne rien proposer");
+        });
+
+        // A voter in the list can add one proposal
+        it('should add a proposal if provided by a registered voter', async () => {
+            const receiptA = await instance.addProposal(propA, { from: voterA });
+            const proposalA = await instance.getOneProposal(0, { from: voterA });
+            expect(proposalA.description).to.equal(propA);
+            expectEvent(receiptA, "ProposalRegistered", { proposalId: new BN(0) });
+        });
+
+        // Same voter can add an additional proposal
+        it('should add an additional proposal, provided by the same registered voter', async () => {
+            const receiptB = await instance.addProposal(propB, { from: voterA });
+            const proposalB = await instance.getOneProposal(new BN(1), { from: voterA });
+            expect(proposalB.description).to.equal(propB);
+            expectEvent(receiptB, "ProposalRegistered", { proposalId: new BN(1) });
+        });
+
+        // Another different voter in the list can add a proposal
+        it('should add a new proposal from another a registered voter', async () => {
+            const receiptC = await instance.addProposal(propC, { from: voterB });
+            const proposalC = await instance.getOneProposal(new BN(2), { from: voterB });
+            expect(proposalC.description).to.equal(propC);
+            expectEvent(receiptC, "ProposalRegistered", { proposalId: new BN(2) });
+        });
+
+        // Only voters can get a proposal in the list
+        it('should not get a proposal from the list if not registered as voter', async () => {
+            await expectRevert(instance.getOneProposal(2, { from: notvoter }), "You're not a voter");
+        });
+
+    });
 
 });
 
