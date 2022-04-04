@@ -6,11 +6,12 @@ const { expect } = require('chai');
 contract('Vote', accounts => {
     // VARIABLES
     const admin = accounts[0];
-    const notadmin = accounts[3];
+    const notadmin = accounts[9];
 
     const voterA = accounts[1];
     const voterB = accounts[2];
-    const notvoter = accounts[4];
+    const voterC = accounts[3];
+    const notvoter = accounts[8];
 
     const propA = "This is Proposal 1";
     const propB = "This is Proposal 2";
@@ -36,6 +37,7 @@ contract('Vote', accounts => {
             const status = await instance.workflowStatus.call();
             expect(new BN(status)).to.be.bignumber.equal(new BN(0));
         });
+
 
         // Admin can switch from status 0 (RegisteringVoters) to 1 (ProposalsRegistrationStarted)
         it('should start the proposals registration and switch to status 1', async () => {
@@ -232,7 +234,7 @@ contract('Vote', accounts => {
     });
 
     // VOTING PHASE
-    describe.only('Validate voting phase', () => {
+    describe('Validate voting phase', () => {
 
         before(async () => {
             instance = await Voting.new({ from: admin });
@@ -270,14 +272,53 @@ contract('Vote', accounts => {
             await expectRevert(instance.setVote(new BN(0), { from: voterA }), "You have already voted");
         });
 
-        // Cannot vote for a non-existing proposal
+        // A voter cannot vote for a non-existing proposal
         it('should not vote for a non-existing proposal', async () => {
             await expectRevert(instance.setVote(new BN(10), { from: voterB }), "Proposal not found");
         });
 
     });
 
+    // TALLYING PHASE
+    describe('Validate tallying phase', () => {
 
+        beforeEach(async () => {
+            instance = await Voting.new({ from: admin });
+            await instance.addVoter(voterA, { from: admin });
+            await instance.addVoter(voterB, { from: admin });
+            await instance.addVoter(voterC, { from: admin });
+            await instance.startProposalsRegistering({ from: admin });
+            await instance.addProposal(propA, { from: voterA });
+            await instance.addProposal(propB, { from: voterA });
+            await instance.addProposal(propC, { from: voterB });
+            await instance.endProposalsRegistering({ from: admin });
+            await instance.startVotingSession({ from: admin });
+            await instance.setVote(new BN(1), { from: voterA });
+            await instance.setVote(new BN(1), { from: voterB });
+            await instance.setVote(new BN(0), { from: voterC });
+            await instance.endVotingSession({ from: admin });
+            await instance.tallyVotes({ from: admin });
+        });
+
+        // Admin can tally votes and everyone in the company can get the winner
+        it('should tally votes and return the winning proposal (accessible for everyone)', async () => {
+            const winner = await instance.winningProposalID.call();
+            expect(winner).to.be.bignumber.equal(new BN(1));
+        });
+
+        // The winning proposal should count two votes (only voters can get)
+        it('should count two votes for the winning proposal called', async () => {
+            const propwin = await instance.getOneProposal(new BN(1), { from: voterA });
+            expect(propwin.voteCount).to.be.bignumber.equal(new BN(2));
+        });
+
+        // The winning proposal should be named "This is Proposal 2" (only voters can get)
+        it('should return "This is Proposal 2" as the winning proposal', async () => {
+            const propwin = await instance.getOneProposal(new BN(1), { from: voterA });
+            expect(propwin.description).to.equal("This is Proposal 2");
+        });
+        
+    });
 
 });
 
