@@ -1,48 +1,63 @@
 # alyra-projet02-testing
 
-**⚡️ Projet 02 - Unit testing for the voting contract** <br />
-Text
+**⚡️ Projet 02 - Unit testing for a voting contract in a small organization** <br />
+This project aims at testing a voting smart contract for a small organization. The voters, all known by the organization, are registered by the administrator on a whitelist with their wallet address. Voters can submit proposals to the vote during the Proposal Registration phase. Voters can vote on propositions during the Voting Session.
+   
+👉 Tests are done following:
+- First context is to ensure all the workflow status changes and rights are correct
+- Second context validates the registration phase
+- Third context validates the proposals phase
+- Fourth context validates the voting phase
+- Fifth context validates the tallying phase
 
-👉 Title:
-- Text
-- Text
-- Text
-    
-👉 Title:
-- Text
-- Text
-- Text
-- Text
-- Text
-- Text
-- Text
-- Text
-- Text
-
+👉 Testing results:
 
 - Contract: Vote
-    * Workflow status change </br>
+
+    * Validate workflow status changes and rights </br>
       ✔️ should show a default status set to 0 (RegisteringVoters) </br>
-      ✔️ should be able to switch from status 0 (RegisteringVoters) to 1 (ProposalsRegistrationStarted) if admin (57ms) </br>
-      ✔️ should not be able to start proposals registration if not admin (40ms)
-      ✓ should be able to switch from status 1 (ProposalsRegistrationStarted) to 2 (ProposalsRegistrationEnded) if admin (38ms)
-      * ✓ should not be able to end proposals registration if not admin
-      * ✓ should be able to switch from status 2 (ProposalsRegistrationEnded) to 3 (VotingSessionStarted) if admin (42ms)
-      ✓ should not be able to start voting session if not admin
-      ✓ should be able to switch from status 3 (VotingSessionStarted) to 4 (VotingSessionEnded) if admin (43ms)
-      ✓ should not be able to end voting session if not admin
-      ✓ should be able to switch from status 4 (VotingSessionEnded) to 5 (VotesTallied) if admin (41ms)
-      ✓ should not be able to tally votes if not admin
-    Registration phase
-      ✓ should add a new voter if admin (51ms)
-      ✓ should not add a new voter if not admin (41ms)
-      ✓ should not add a voter if already exists in the list of voters
-      ✓ should not add a new voter if the workflow status is set to another status (66ms)
-      ✓ should not get a voter in the list if not registered as voter (216ms)
-    Proposals phase
-      ✓ should add a proposal if provided by a registered voter (124ms)
-      ✓ should add an additional proposal, provided by the same registered voter (71ms)
-      ✓ should add a new proposal from another a registered voter (50ms)
+      ✔️ should start the proposals registration and switch to status 1 </br>
+      ✔️ should end the proposals registration and switch to status 2 </br>
+      ✔️ should start voting session and switch to status 3 </br>
+      ✔️ should end voting session and switch to status 4 </br>
+      ✔️ should tallies vote and switch to status 5 </br>
+      ✔️ should not start proposals registration if not currently in RegisteringVoters status </br>
+      ✔️ should not end the proposals registration if not currently in ProposalsRegistrationStarted status </br>
+      ✔️ should not start voting session if not currently in ProposalsRegistrationEnded status </br>
+      ✔️ should not end voting session if not currently in VotingSessionStarted status </br>
+      ✔️ should not tally votes if not currently in VotingSessionEnded status </br>
+      ✔️ should not start the proposals registration if not admin </br>
+      ✔️ should not end proposals registration if not admin </br>
+      ✔️ should not start voting session if not admin </br>
+      ✔️ should not end voting session if not admin </br>
+      ✔️ should not be able to tally votes if not admin </br>
 
+    * Validate registration phase </br>
+      ✔️ should add a new voter </br>
+      ✔️ should not add a new voter if not admin </br>
+      ✔️ should not add a voter if already exists in the list of voters </br>
+      ✔️ should not add a new voter if the workflow status is set to another status </br>
+      ✔️ should not get a voter from the list if not registered as voter </br>
 
-  19 passing (2s)
+    * Validate proposals phase </br>
+      ✔️ should not add a new proposal if workflow status is not ProposalsRegistrationStarted </br>
+      ✔️ should not add a proposal if not a registered voter </br>
+      ✔️ should not add an empty proposal </br>
+      ✔️ should add a proposal if provided by a registered voter </br>
+      ✔️ should add an additional proposal, provided by the same registered voter </br>
+      ✔️ should add a new proposal from another a registered voter </br>
+      ✔️ should not get a proposal from the list if not registered as voter </br>
+
+    * Validate voting phase </br>
+      ✔️ should not vote if workflow status is not VotingSessionStarted </br>
+      ✔️ should not vote if not a registered voter </br>
+      ✔️ should vote for an existing proposal if a registered voter </br>
+      ✔️ should not vote twice </br>
+      ✔️ should not vote for a non-existing proposal </br>
+
+    * Validate tallying phase </br>
+      ✔️ should tally votes and return the winning proposal (accessible for everyone) </br>
+      ✔️ should count two votes for the winning proposal </br>
+      ✔️ should return "This is Proposal 2" as the winning proposal </br>
+
+  <span style="color:green">36 passing</span>
