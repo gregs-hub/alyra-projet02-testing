@@ -3,7 +3,7 @@
 **⚡️ Projet 02 - Unit testing for a voting contract in a small organization** <br />
 This project aims at testing a voting smart contract for a small organization. The voters, all known by the organization, are registered by the administrator on a whitelist with their wallet address. Voters can submit proposals to the vote during the Proposal Registration phase. Voters can vote on propositions during the Voting Session.
    
-👉 Tests are done following:
+👉 Tests are done following these steps:
 - First context is to ensure all the workflow status changes and rights are correct
 - Second context validates the registration phase
 - Third context validates the proposals phase
@@ -60,4 +60,5 @@ This project aims at testing a voting smart contract for a small organization. T
       ✔️ should count two votes for the winning proposal </br>
       ✔️ should return "This is Proposal 2" as the winning proposal </br>
 
-  <span style="color:green">36 passing</span>
+    <span style="color:green">36 passing</span></br>
+    <span style="color:green">Coverage 100% (solidity-coverage)</span>
