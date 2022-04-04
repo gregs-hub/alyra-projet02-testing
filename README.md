@@ -45,7 +45,7 @@ This project aims at testing a voting smart contract for a small organization. T
       ✔️ should not add an empty proposal </br>
       ✔️ should add a proposal if provided by a registered voter </br>
       ✔️ should add an additional proposal, provided by the same registered voter </br>
-      ✔️ should add a new proposal from another a registered voter </br>
+      ✔️ should add a new proposal from another registered voter </br>
       ✔️ should not get a proposal from the list if not registered as voter </br>
 
     * Validate voting phase </br>
