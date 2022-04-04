@@ -220,7 +220,7 @@ contract('Vote', accounts => {
         });
 
         // Another different voter in the list can add a proposal
-        it('should add a new proposal from another a registered voter', async () => {
+        it('should add a new proposal from another registered voter', async () => {
             const receiptC = await instance.addProposal(propC, { from: voterB });
             const proposalC = await instance.getOneProposal(new BN(2), { from: voterB });
             expect(proposalC.description).to.equal(propC);
