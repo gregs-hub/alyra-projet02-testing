@@ -4,6 +4,7 @@ const { BN, expectRevert, expectEvent } = require('@openzeppelin/test-helpers');
 const { expect } = require('chai');
 
 contract('Vote', accounts => {
+
     // VARIABLES
     const admin = accounts[0];
     const notadmin = accounts[9];
@@ -307,7 +308,7 @@ contract('Vote', accounts => {
         });
 
         // The winning proposal should count two votes (only voters can get)
-        it('should count two votes for the winning proposal called', async () => {
+        it('should count two votes for the winning proposal', async () => {
             const propwin = await instance.getOneProposal(new BN(1), { from: voterA });
             expect(propwin.voteCount).to.be.bignumber.equal(new BN(2));
         });
